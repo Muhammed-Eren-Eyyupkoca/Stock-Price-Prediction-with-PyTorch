@@ -1,9 +1,8 @@
-# Stock-Price-Prediction-with-PyTorch
-Time-series stock price prediction pipeline built with PyTorch. Features data analysis, preprocessing, and a comparative study of LSTM vs. GRU architectures.
-
 # Stock Price Prediction with PyTorch (LSTM & GRU)
 
-This project is developed as part of my learning journey. The goal is to predict stock prices using Deep Learning sequence models (LSTM and GRU) built with PyTorch.
+## Description
+
+A time-series stock price prediction pipeline built with PyTorch. This project fetches historical stock data, performs exploratory data analysis, and trains deep learning sequence models to forecast future prices. The main goal is a **comparative study of LSTM vs. GRU architectures**, evaluating which recurrent model performs better on stock price forecasting.
 
 ## 🚀 Project Roadmap (4 Weeks)
 
@@ -30,3 +29,23 @@ This project is developed as part of my learning journey. The goal is to predict
 - [ ] Plot predictions vs. actual stock prices for both models.
 - [ ] Document final results, limitations, and key learnings in the README.md.
 - [ ] Deliverable: Fully completed GitHub repository, clean notebook, and a comparison table.
+
+## Project Structure
+
+```
+├── data/                       # Raw and processed datasets (ignored by git)
+├── notebooks/
+│   └── 01_data_exploration.ipynb
+├── src/
+│   ├── dataset.py              # Data loading & preprocessing
+│   ├── models.py                # LSTM & GRU model definitions
+│   └── train.py                 # Training loop
+├── requirements.txt
+└── README.md
+```
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
