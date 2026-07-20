@@ -13,8 +13,11 @@ __pycache__/
 .env
 
 # Data files
-data/*.csv
-data/*.xlsx
+data/
+
+# Model weights
+*.pt
+*.pth
 
 # OS-specific files
 .DS_Store

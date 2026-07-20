@@ -1,5 +1,9 @@
 # Stock Price Prediction with PyTorch (LSTM & GRU)
 
+## Proje Amacı
+
+Bu proje, PyTorch kullanarak geçmiş hisse senedi verilerinden gelecekteki fiyat hareketlerini tahmin etmeyi amaçlayan bir zaman serisi tahmin uygulamasıdır. LSTM ve GRU mimarilerinin performansını karşılaştırarak hisse senedi fiyat tahmininde hangi modelin daha başarılı olduğunu ortaya koymayı hedefler.
+
 ## Description
 
 A time-series stock price prediction pipeline built with PyTorch. This project fetches historical stock data, performs exploratory data analysis, and trains deep learning sequence models to forecast future prices. The main goal is a **comparative study of LSTM vs. GRU architectures**, evaluating which recurrent model performs better on stock price forecasting.
