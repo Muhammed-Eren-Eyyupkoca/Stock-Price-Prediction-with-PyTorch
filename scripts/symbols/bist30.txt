@@ -1,0 +1,34 @@
+# BIST 30 (XU030) endeksi bileşenleri (Yahoo Finance ".IS" son eki ile).
+# Kaynak: Borsa İstanbul XU030 bileşen listesi (2026-07 itibarıyla).
+# Not: Endeks bileşenleri Borsa İstanbul tarafından üç ayda bir gözden geçirilir,
+# bu dosyayı periyodik olarak güncel listeyle karşılaştırın.
+AEFES.IS
+AKBNK.IS
+ASELS.IS
+ASTOR.IS
+BIMAS.IS
+DSTKF.IS
+EKGYO.IS
+ENKAI.IS
+EREGL.IS
+FROTO.IS
+GARAN.IS
+GUBRF.IS
+ISCTR.IS
+KCHOL.IS
+KRDMD.IS
+MGROS.IS
+PETKM.IS
+PGSUS.IS
+SAHOL.IS
+SASA.IS
+SISE.IS
+TAVHL.IS
+TCELL.IS
+THYAO.IS
+TOASO.IS
+TRALT.IS
+TTKOM.IS
+TUPRS.IS
+VAKBN.IS
+YKBNK.IS
