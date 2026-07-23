@@ -1,0 +1,150 @@
+"""Build the processed feature set for one stock symbol from data/raw/<symbol>.csv,
+split it chronologically into train/val/test (no shuffling), fit a MinMaxScaler on
+the train split only, and save the three scaled splits under data/processed/.
+
+Usage:
+    python scripts/preprocess.py
+    python scripts/preprocess.py --symbol THYAO.IS
+    python scripts/preprocess.py --symbol GARAN.IS --train-frac 0.7 --val-frac 0.15
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+
+try:
+    import pandas_ta as ta
+    HAS_PANDAS_TA = True
+except ImportError:
+    HAS_PANDAS_TA = False
+
+RAW_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
+PROCESSED_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Kronolojik train/val/test bölme ve MinMax ölçekleme uygular."
+    )
+    parser.add_argument(
+        "--symbol", default="THYAO.IS", help="data/raw/ altındaki hisse sembolü (varsayılan: THYAO.IS)"
+    )
+    parser.add_argument(
+        "--train-frac", type=float, default=0.70, help="Train oranı (varsayılan: 0.70)"
+    )
+    parser.add_argument(
+        "--val-frac", type=float, default=0.15, help="Validation oranı (varsayılan: 0.15)"
+    )
+    return parser.parse_args()
+
+
+def load_and_clean(symbol: str) -> pd.DataFrame:
+    raw_path = RAW_DATA_DIR / f"{symbol}.csv"
+    if not raw_path.exists():
+        raise FileNotFoundError(f"Ham veri dosyası bulunamadı: '{raw_path}'")
+
+    df = pd.read_csv(raw_path, index_col="Date", parse_dates=True)
+    df = df.ffill().dropna()
+    return df
+
+
+def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    if HAS_PANDAS_TA:
+        df["SMA_20"] = ta.sma(df["Close"], length=20)
+        df["RSI_14"] = ta.rsi(df["Close"], length=14)
+        macd_df = ta.macd(df["Close"], fast=12, slow=26, signal=9)
+        df["MACD"] = macd_df["MACD_12_26_9"]
+        df["MACD_Signal"] = macd_df["MACDs_12_26_9"]
+        df["MACD_Hist"] = macd_df["MACDh_12_26_9"]
+    else:
+        df["SMA_20"] = df["Close"].rolling(window=20).mean()
+
+        def compute_rsi(series: pd.Series, period: int = 14) -> pd.Series:
+            delta = series.diff()
+            gain = delta.clip(lower=0)
+            loss = -delta.clip(upper=0)
+            avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+            avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+            rs = avg_gain / avg_loss
+            return 100 - (100 / (1 + rs))
+
+        df["RSI_14"] = compute_rsi(df["Close"], period=14)
+
+        ema_12 = df["Close"].ewm(span=12, adjust=False).mean()
+        ema_26 = df["Close"].ewm(span=26, adjust=False).mean()
+        df["MACD"] = ema_12 - ema_26
+        df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
+        df["MACD_Hist"] = df["MACD"] - df["MACD_Signal"]
+
+    # SMA/RSI/MACD ısınma pencereleri baştaki satırlarda NaN üretir
+    return df.dropna()
+
+
+def chronological_split(
+    df: pd.DataFrame, train_frac: float, val_frac: float
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if not 0 < train_frac < 1 or not 0 < val_frac < 1 or train_frac + val_frac >= 1:
+        raise ValueError("train_frac ve val_frac (0, 1) aralığında olmalı ve toplamları 1'den küçük olmalı")
+
+    n = len(df)
+    train_end = int(n * train_frac)
+    val_end = train_end + int(n * val_frac)
+
+    train_df = df.iloc[:train_end]
+    val_df = df.iloc[train_end:val_end]
+    test_df = df.iloc[val_end:]
+    return train_df, val_df, test_df
+
+
+def scale_splits(
+    train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    scaler = MinMaxScaler()
+    scaler.fit(train_df)
+
+    train_scaled = pd.DataFrame(
+        scaler.transform(train_df), index=train_df.index, columns=train_df.columns
+    )
+    val_scaled = pd.DataFrame(
+        scaler.transform(val_df), index=val_df.index, columns=val_df.columns
+    )
+    test_scaled = pd.DataFrame(
+        scaler.transform(test_df), index=test_df.index, columns=test_df.columns
+    )
+    return train_scaled, val_scaled, test_scaled
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        df = load_and_clean(args.symbol)
+    except FileNotFoundError as exc:
+        print(f"Hata: {exc}", file=sys.stderr)
+        return 1
+
+    df = add_technical_indicators(df)
+    train_df, val_df, test_df = chronological_split(df, args.train_frac, args.val_frac)
+    train_scaled, val_scaled, test_scaled = scale_splits(train_df, val_df, test_df)
+
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    train_scaled.to_csv(PROCESSED_DATA_DIR / "train.csv")
+    val_scaled.to_csv(PROCESSED_DATA_DIR / "val.csv")
+    test_scaled.to_csv(PROCESSED_DATA_DIR / "test.csv")
+
+    print(
+        f"'{args.symbol}' için işlenmiş veri bölündü ve ölçeklendi: "
+        f"train={len(train_scaled)}, val={len(val_scaled)}, test={len(test_scaled)} satır."
+    )
+    print(f"Kaydedildi: {PROCESSED_DATA_DIR}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
