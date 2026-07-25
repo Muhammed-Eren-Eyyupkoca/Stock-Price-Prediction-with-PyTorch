@@ -11,14 +11,14 @@ A time-series stock price prediction pipeline built with PyTorch. This project f
 ## 🚀 Project Roadmap (4 Weeks)
 
 ### 📊 Week 1: Data Acquisition & Exploratory Data Analysis (EDA)
-- [ ] Set up the GitHub repository structure and virtual environment.
-- [ ] Fetch historical stock data using Yahoo Finance (yfinance) or pandas-datareader.
-- [ ] Perform Exploratory Data Analysis (EDA) using Pandas and Matplotlib/Seaborn.
-- [ ] Deliverable: Jupyter Notebook with data visualizations and clean, saved CSV datasets.
+- [x] Set up the GitHub repository structure and virtual environment.
+- [x] Fetch historical stock data using Yahoo Finance (yfinance) or pandas-datareader.
+- [x] Perform Exploratory Data Analysis (EDA) using Pandas and Matplotlib/Seaborn.
+- [x] Deliverable: Jupyter Notebook with data visualizations and clean, saved CSV datasets.
 
 ### ⚙️ Week 2: Data Preprocessing & Baseline LSTM Model
-- [ ] Prepare the dataset for time-series (scaling, sequence creation, train-test split).
-- [ ] Create PyTorch Dataset and DataLoader classes.
+- [x] Prepare the dataset for time-series (scaling, sequence creation, train-test split).
+- [x] Create PyTorch Dataset and DataLoader classes.
 - [ ] Build and train a baseline LSTM model in PyTorch.
 - [ ] Deliverable: Working PyTorch training pipeline with training loss visualization.
 
