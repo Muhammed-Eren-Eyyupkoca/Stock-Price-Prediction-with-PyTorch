@@ -1,4 +1,4 @@
-"""LSTM sequence model for next-day Close price prediction."""
+"""LSTM & GRU sequence models for next-day Close price prediction."""
 
 import torch
 from torch import nn
@@ -19,14 +19,34 @@ class LSTMModel(nn.Module):
         return self.fc(last_step)
 
 
+class GRUModel(nn.Module):
+    """Same interface as LSTMModel (same input/output shape), backed by nn.GRU."""
+
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int, output_size: int) -> None:
+        super().__init__()
+        self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        gru_out, _ = self.gru(x)
+        last_step = gru_out[:, -1, :]
+        return self.fc(last_step)
+
+
 if __name__ == "__main__":
     batch_size, lookback, input_size = 32, 30, 11
     hidden_size, num_layers, output_size = 64, 2, 1
+    expected_shape = (batch_size, output_size)
 
-    model = LSTMModel(input_size, hidden_size, num_layers, output_size)
     sample_batch = torch.randn(batch_size, lookback, input_size)
 
-    prediction = model(sample_batch)
+    for name, model_cls in [("LSTMModel", LSTMModel), ("GRUModel", GRUModel)]:
+        model = model_cls(input_size, hidden_size, num_layers, output_size)
+        prediction = model(sample_batch)
 
-    print(f"Girdi shape: {tuple(sample_batch.shape)}")
-    print(f"Çıktı shape: {tuple(prediction.shape)} (beklenen: ({batch_size}, {output_size}))")
+        print(f"{name} çıktı shape: {tuple(prediction.shape)} (beklenen: {expected_shape})")
+        assert tuple(prediction.shape) == expected_shape, (
+            f"{name} beklenmeyen shape üretti: {tuple(prediction.shape)} != {expected_shape}"
+        )
+
+    print("LSTMModel ve GRUModel aynı girdiyle aynı çıktı boyutunu üretiyor.")
