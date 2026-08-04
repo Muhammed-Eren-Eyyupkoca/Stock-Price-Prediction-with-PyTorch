@@ -24,7 +24,7 @@ A time-series stock price prediction pipeline built with PyTorch. This project f
 
 ### 🧠 Week 3: GRU Model Implementation & Hyperparameter Tuning
 - [x] Implement the GRU model architecture in PyTorch.
-- [ ] Train the GRU model on the same prepared dataset.
+- [x] Train the GRU model on the same prepared dataset.
 - [x] Experiment with hyperparameters (learning rate, hidden dimensions, epochs).
 - [ ] Deliverable: Trained LSTM and GRU model weights saved locally.
 
