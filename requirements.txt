@@ -5,4 +5,5 @@ matplotlib
 seaborn
 yfinance
 scikit-learn
+joblib
 jupyter

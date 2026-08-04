@@ -1,6 +1,8 @@
 """Build the processed feature set for one stock symbol from data/raw/<symbol>.csv,
 split it chronologically into train/val/test (no shuffling), fit a MinMaxScaler on
-the train split only, and save the three scaled splits under data/processed/.
+the train split only, and save the three scaled splits under data/processed/. The
+fitted scaler is also saved (data/processed/scaler.pkl) so predictions can later
+be inverse-transformed back to real price units (see scripts/evaluate.py).
 
 Usage:
     python scripts/preprocess.py
@@ -12,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import joblib
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
@@ -103,7 +106,7 @@ def chronological_split(
 
 def scale_splits(
     train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, MinMaxScaler]:
     scaler = MinMaxScaler()
     scaler.fit(train_df)
 
@@ -116,7 +119,7 @@ def scale_splits(
     test_scaled = pd.DataFrame(
         scaler.transform(test_df), index=test_df.index, columns=test_df.columns
     )
-    return train_scaled, val_scaled, test_scaled
+    return train_scaled, val_scaled, test_scaled, scaler
 
 
 def main() -> int:
@@ -130,18 +133,19 @@ def main() -> int:
 
     df = add_technical_indicators(df)
     train_df, val_df, test_df = chronological_split(df, args.train_frac, args.val_frac)
-    train_scaled, val_scaled, test_scaled = scale_splits(train_df, val_df, test_df)
+    train_scaled, val_scaled, test_scaled, scaler = scale_splits(train_df, val_df, test_df)
 
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     train_scaled.to_csv(PROCESSED_DATA_DIR / "train.csv")
     val_scaled.to_csv(PROCESSED_DATA_DIR / "val.csv")
     test_scaled.to_csv(PROCESSED_DATA_DIR / "test.csv")
+    joblib.dump(scaler, PROCESSED_DATA_DIR / "scaler.pkl")
 
     print(
         f"'{args.symbol}' için işlenmiş veri bölündü ve ölçeklendi: "
         f"train={len(train_scaled)}, val={len(val_scaled)}, test={len(test_scaled)} satır."
     )
-    print(f"Kaydedildi: {PROCESSED_DATA_DIR}")
+    print(f"Kaydedildi: {PROCESSED_DATA_DIR} (train.csv, val.csv, test.csv, scaler.pkl)")
 
     return 0
 
