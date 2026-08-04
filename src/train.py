@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from torch import nn
@@ -11,6 +12,7 @@ from dataset import StockDataset
 from models import LSTMModel
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
+RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 
 
 def train_one_epoch(
@@ -49,8 +51,7 @@ def validate(model: nn.Module, dataloader: DataLoader, criterion: nn.Module) -> 
 if __name__ == "__main__":
     lookback, hidden_size, num_layers, output_size = 30, 64, 2, 1
     batch_size = 32
-    max_epochs = 50
-    early_stopping_patience = 5
+    num_epochs = 25
 
     processed_dir = Path(__file__).resolve().parent.parent / "data" / "processed"
     train_df = pd.read_csv(processed_dir / "train.csv", index_col="Date", parse_dates=True)
@@ -69,24 +70,33 @@ if __name__ == "__main__":
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     best_model_path = MODELS_DIR / "best_model.pt"
 
+    train_losses = []
+    val_losses = []
     best_val_loss = float("inf")
-    epochs_without_improvement = 0
 
-    for epoch in range(1, max_epochs + 1):
+    for epoch in range(1, num_epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion)
         val_loss = validate(model, val_loader, criterion)
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
         print(f"Epoch {epoch} - train loss: {train_loss:.6f}, val loss: {val_loss:.6f}")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            epochs_without_improvement = 0
             torch.save(model.state_dict(), best_model_path)
             print(f"  -> yeni en iyi val loss ({best_val_loss:.6f}), model '{best_model_path}' olarak kaydedildi.")
-        else:
-            epochs_without_improvement += 1
-            if epochs_without_improvement >= early_stopping_patience:
-                print(
-                    f"Validation loss {early_stopping_patience} epoch boyunca iyileşmedi, "
-                    "eğitim erken durduruluyor."
-                )
-                break
+
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    loss_curve_path = RESULTS_DIR / "loss_curve.png"
+
+    epochs = range(1, num_epochs + 1)
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs, train_losses, label="Train Loss")
+    plt.plot(epochs, val_losses, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("MSE Loss")
+    plt.title("LSTMModel - Train vs. Validation Loss")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(loss_curve_path)
+    print(f"Loss eğrisi '{loss_curve_path}' olarak kaydedildi.")

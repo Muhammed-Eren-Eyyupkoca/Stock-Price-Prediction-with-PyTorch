@@ -20,7 +20,7 @@ A time-series stock price prediction pipeline built with PyTorch. This project f
 - [x] Prepare the dataset for time-series (scaling, sequence creation, train-test split).
 - [x] Create PyTorch Dataset and DataLoader classes.
 - [x] Build and train a baseline LSTM model in PyTorch.
-- [ ] Deliverable: Working PyTorch training pipeline with training loss visualization.
+- [x] Deliverable: Working PyTorch training pipeline with training loss visualization.
 
 ### 🧠 Week 3: GRU Model Implementation & Hyperparameter Tuning
 - [x] Implement the GRU model architecture in PyTorch.
