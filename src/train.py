@@ -21,6 +21,17 @@ def train_one_epoch(
     optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
 ) -> float:
+    """Runs one training epoch: forward, backward and an optimizer step per batch.
+
+    Args:
+        model: Model to train; switched to train() mode.
+        dataloader: Yields (X, y) batches.
+        optimizer: Optimizer updating model.parameters().
+        criterion: Loss function applied to (predictions, y).
+
+    Returns:
+        Mean loss over the epoch, weighted by batch size.
+    """
     model.train()
     total_loss = 0.0
 
@@ -36,6 +47,16 @@ def train_one_epoch(
 
 
 def validate(model: nn.Module, dataloader: DataLoader, criterion: nn.Module) -> float:
+    """Evaluates `model` on `dataloader` without updating its weights.
+
+    Args:
+        model: Model to evaluate; switched to eval() mode.
+        dataloader: Yields (X, y) batches.
+        criterion: Loss function applied to (predictions, y).
+
+    Returns:
+        Mean loss over the dataloader, weighted by batch size.
+    """
     model.eval()
     total_loss = 0.0
 

@@ -1,9 +1,8 @@
-torch
-pandas
-numpy
-matplotlib
-seaborn
-yfinance
-scikit-learn
-joblib
-jupyter
+torch==2.13.0
+pandas==3.0.3
+numpy==2.5.1
+matplotlib==3.11.1
+yfinance==1.5.1
+scikit-learn==1.9.0
+joblib==1.5.3
+jupyter==1.1.1

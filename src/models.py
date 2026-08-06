@@ -9,11 +9,25 @@ class LSTMModel(nn.Module):
     predicts a single value from the last time step's hidden state."""
 
     def __init__(self, input_size: int, hidden_size: int, num_layers: int, output_size: int) -> None:
+        """
+        Args:
+            input_size: Number of features per time step.
+            hidden_size: Number of units in each LSTM layer.
+            num_layers: Number of stacked LSTM layers.
+            output_size: Size of the final prediction (1 for next-day Close).
+        """
         super().__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Input batch of shape (batch, lookback, input_size).
+
+        Returns:
+            Predictions of shape (batch, output_size).
+        """
         lstm_out, _ = self.lstm(x)
         last_step = lstm_out[:, -1, :]
         return self.fc(last_step)
@@ -23,11 +37,25 @@ class GRUModel(nn.Module):
     """Same interface as LSTMModel (same input/output shape), backed by nn.GRU."""
 
     def __init__(self, input_size: int, hidden_size: int, num_layers: int, output_size: int) -> None:
+        """
+        Args:
+            input_size: Number of features per time step.
+            hidden_size: Number of units in each GRU layer.
+            num_layers: Number of stacked GRU layers.
+            output_size: Size of the final prediction (1 for next-day Close).
+        """
         super().__init__()
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Input batch of shape (batch, lookback, input_size).
+
+        Returns:
+            Predictions of shape (batch, output_size).
+        """
         gru_out, _ = self.gru(x)
         last_step = gru_out[:, -1, :]
         return self.fc(last_step)

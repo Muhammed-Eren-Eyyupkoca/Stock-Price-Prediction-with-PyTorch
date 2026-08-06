@@ -21,6 +21,19 @@ class StockDataset(Dataset):
         lookback: int,
         close_col: Union[str, int] = "Close",
     ) -> None:
+        """Builds the windowed feature/target tensors from a scaled feature table.
+
+        Args:
+            data: Scaled feature table, either a DataFrame (columns are feature
+                names) or a numpy array (columns are feature positions).
+            lookback: Number of preceding days used as the input window for each sample.
+            close_col: Close-price column name (DataFrame) or column index (numpy
+                array) used as the prediction target.
+
+        Raises:
+            ValueError: If lookback < 1, or data has too few rows for that lookback.
+            TypeError: If a numpy array is passed with a string close_col.
+        """
         if lookback < 1:
             raise ValueError("lookback en az 1 olmalı")
 
@@ -46,9 +59,20 @@ class StockDataset(Dataset):
         self.features = torch.from_numpy(values)
 
     def __len__(self) -> int:
+        """Returns the number of (X, y) windows the dataset can produce."""
         return len(self.features) - self.lookback
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Returns sample `idx`.
+
+        Args:
+            idx: Window start position, in [0, len(self)).
+
+        Returns:
+            A tuple (X, y): X has shape (lookback, n_features) and holds the
+            `lookback` days ending at `idx`; y has shape (1,) and holds the
+            Close price on the following day.
+        """
         x = self.features[idx : idx + self.lookback]
         y = self.features[idx + self.lookback, self.close_idx].unsqueeze(0)
         return x, y
