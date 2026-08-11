@@ -87,6 +87,37 @@ def fetch_ohlcv(symbol: str, years: int) -> pd.DataFrame:
     return data
 
 
+def get_opening_price(symbol: str) -> float:
+    """Returns `symbol`'s opening price for today (the exchange's opening
+    auction print, ~09:55-10:00 Turkey time), read from today's 5-minute
+    intraday bars.
+
+    Raises:
+        RuntimeError: If today has no intraday data yet (market not open /
+            not a trading day) or the price can't be retrieved.
+    """
+    try:
+        history = yf.Ticker(symbol).history(period="1d", interval="5m")
+    except Exception as exc:
+        raise RuntimeError(f"'{symbol}' için güne başlangıç fiyatı alınamadı: {exc}") from exc
+
+    if history.empty:
+        raise RuntimeError(
+            f"'{symbol}' için bugüne ait gün içi veri yok (piyasa açık olmayabilir)."
+        )
+
+    history = history.tz_convert("Europe/Istanbul")
+
+    today = pd.Timestamp.now(tz="Europe/Istanbul").date()
+    todays_bars = history[history.index.date == today]
+    if todays_bars.empty:
+        raise RuntimeError(
+            f"'{symbol}' için bugüne ait gün içi veri yok (piyasa açık olmayabilir)."
+        )
+
+    return float(todays_bars.iloc[0]["Open"])
+
+
 def fetch_and_save(symbol: str, years: int) -> int:
     try:
         data = fetch_ohlcv(symbol, years)

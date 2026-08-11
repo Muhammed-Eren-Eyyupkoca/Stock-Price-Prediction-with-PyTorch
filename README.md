@@ -59,7 +59,8 @@ A time-series stock price prediction pipeline built with PyTorch. This project f
 ├── src/
 │   ├── dataset.py                 # StockDataset (kayan pencereli PyTorch Dataset)
 │   ├── models.py                  # LSTMModel & GRUModel tanımları
-│   └── train.py                   # train_one_epoch / validate ve tam eğitim döngüsü
+│   └── train.py                   # train_one_epoch / validate / train_model ve tam eğitim döngüsü
+├── app.py                         # Masaüstü GUI: BIST-30 sembol listesi + "Analiz Et" butonu
 ├── requirements.txt
 └── README.md
 ```
@@ -120,6 +121,16 @@ python scripts/compare_models.py
 # lr / hidden_size / lookback için manuel grid search, en iyi 3 kombinasyonu yazdırır
 python scripts/hyperparameter_search.py
 ```
+
+## Masaüstü Uygulaması (GUI)
+
+Komut satırı yerine tek pencereden çalışmak için basit bir Tkinter arayüzü de var:
+
+```bash
+python app.py
+```
+
+Açılış ekranında **HisseAnaliz** başlığı ile **Projenin Amacı** / **Nasıl Kullanılır** bilgi butonları bulunur (tıklandığında açıklama metni ekranda aşağı doğru açılır). Sol menüdeki lacivert BIST-30 butonlarından birine tıklayınca o hissenin güne başlangıç fiyatı gösterilir; altındaki **Analiz Et** butonuna basınca uygulama seçilen hisse için `fetch_data.py` → `preprocess.py` → `train_model()` (25 epoch) → `run_evaluation()` adımlarını arka planda (arayüzü kilitlemeden) sırayla çalıştırır. İşlem sürerken adım adım ilerleme günlüğü, tamamlanınca RMSE/MAE/MAPE metrikleri ile loss/tahmin grafikleri pencerede gösterilir. Her analiz bir öncekinin `data/processed/`, `models/best_model.pt` ve `results/` çıktılarının üzerine yazar — yani uygulama her an tek bir aktif analiz durumunu gösterir.
 
 ## Sonuçlar
 

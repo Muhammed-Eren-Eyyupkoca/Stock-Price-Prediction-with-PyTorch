@@ -122,17 +122,24 @@ def scale_splits(
     return train_scaled, val_scaled, test_scaled, scaler
 
 
-def main() -> int:
-    args = parse_args()
+def preprocess_symbol(symbol: str, train_frac: float = 0.70, val_frac: float = 0.15) -> dict:
+    """Runs the full preprocessing pipeline for one symbol and writes
+    train.csv/val.csv/test.csv/scaler.pkl under data/processed/.
 
-    try:
-        df = load_and_clean(args.symbol)
-    except FileNotFoundError as exc:
-        print(f"Hata: {exc}", file=sys.stderr)
-        return 1
+    Args:
+        symbol: data/raw/<symbol>.csv to read.
+        train_frac: Fraction of rows (chronologically) used for training.
+        val_frac: Fraction of rows used for validation (test gets the remainder).
 
+    Returns:
+        Row counts: {"train": int, "val": int, "test": int}.
+
+    Raises:
+        FileNotFoundError: If data/raw/<symbol>.csv does not exist.
+    """
+    df = load_and_clean(symbol)
     df = add_technical_indicators(df)
-    train_df, val_df, test_df = chronological_split(df, args.train_frac, args.val_frac)
+    train_df, val_df, test_df = chronological_split(df, train_frac, val_frac)
     train_scaled, val_scaled, test_scaled, scaler = scale_splits(train_df, val_df, test_df)
 
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -141,9 +148,21 @@ def main() -> int:
     test_scaled.to_csv(PROCESSED_DATA_DIR / "test.csv")
     joblib.dump(scaler, PROCESSED_DATA_DIR / "scaler.pkl")
 
+    return {"train": len(train_scaled), "val": len(val_scaled), "test": len(test_scaled)}
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        counts = preprocess_symbol(args.symbol, args.train_frac, args.val_frac)
+    except FileNotFoundError as exc:
+        print(f"Hata: {exc}", file=sys.stderr)
+        return 1
+
     print(
         f"'{args.symbol}' için işlenmiş veri bölündü ve ölçeklendi: "
-        f"train={len(train_scaled)}, val={len(val_scaled)}, test={len(test_scaled)} satır."
+        f"train={counts['train']}, val={counts['val']}, test={counts['test']} satır."
     )
     print(f"Kaydedildi: {PROCESSED_DATA_DIR} (train.csv, val.csv, test.csv, scaler.pkl)")
 

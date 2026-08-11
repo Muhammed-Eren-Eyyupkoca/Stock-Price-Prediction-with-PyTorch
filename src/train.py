@@ -1,6 +1,7 @@
 """Training loop for the LSTM/GRU stock price models."""
 
 from pathlib import Path
+from typing import Callable
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,6 +14,7 @@ from models import LSTMModel
 
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
+PROCESSED_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 
 
 def train_one_epoch(
@@ -69,14 +71,35 @@ def validate(model: nn.Module, dataloader: DataLoader, criterion: nn.Module) -> 
     return total_loss / len(dataloader.dataset)
 
 
-if __name__ == "__main__":
-    lookback, hidden_size, num_layers, output_size = 30, 64, 2, 1
-    batch_size = 32
-    num_epochs = 25
+def train_model(
+    lookback: int = 30,
+    hidden_size: int = 64,
+    num_layers: int = 2,
+    output_size: int = 1,
+    batch_size: int = 32,
+    num_epochs: int = 25,
+    lr: float = 1e-3,
+    log: Callable[[str], None] = print,
+) -> dict:
+    """Trains an LSTMModel on data/processed/{train,val}.csv for `num_epochs`
+    epochs, saving the best (lowest validation loss) checkpoint to
+    models/best_model.pt and a train/val loss plot to results/loss_curve.png.
 
-    processed_dir = Path(__file__).resolve().parent.parent / "data" / "processed"
-    train_df = pd.read_csv(processed_dir / "train.csv", index_col="Date", parse_dates=True)
-    val_df = pd.read_csv(processed_dir / "val.csv", index_col="Date", parse_dates=True)
+    Args:
+        lookback, hidden_size, num_layers, output_size: LSTMModel/StockDataset
+            hyperparameters.
+        batch_size: DataLoader batch size (shuffle is off, splits are chronological).
+        num_epochs: Number of epochs to train for (no early stopping).
+        lr: Adam learning rate.
+        log: Callback invoked with a human-readable string after each epoch and
+            on checkpoint saves; defaults to `print`.
+
+    Returns:
+        {"train_losses": [...], "val_losses": [...], "best_val_loss": float,
+         "best_model_path": Path}.
+    """
+    train_df = pd.read_csv(PROCESSED_DATA_DIR / "train.csv", index_col="Date", parse_dates=True)
+    val_df = pd.read_csv(PROCESSED_DATA_DIR / "val.csv", index_col="Date", parse_dates=True)
 
     train_dataset = StockDataset(train_df, lookback=lookback)
     val_dataset = StockDataset(val_df, lookback=lookback)
@@ -85,7 +108,7 @@ if __name__ == "__main__":
 
     input_size = train_df.shape[1]
     model = LSTMModel(input_size, hidden_size, num_layers, output_size)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -100,12 +123,12 @@ if __name__ == "__main__":
         val_loss = validate(model, val_loader, criterion)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-        print(f"Epoch {epoch} - train loss: {train_loss:.6f}, val loss: {val_loss:.6f}")
+        log(f"Epoch {epoch} - train loss: {train_loss:.6f}, val loss: {val_loss:.6f}")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), best_model_path)
-            print(f"  -> yeni en iyi val loss ({best_val_loss:.6f}), model '{best_model_path}' olarak kaydedildi.")
+            log(f"  -> yeni en iyi val loss ({best_val_loss:.6f}), model '{best_model_path}' olarak kaydedildi.")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     loss_curve_path = RESULTS_DIR / "loss_curve.png"
@@ -120,4 +143,16 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
     plt.savefig(loss_curve_path)
-    print(f"Loss eğrisi '{loss_curve_path}' olarak kaydedildi.")
+    plt.close()
+    log(f"Loss eğrisi '{loss_curve_path}' olarak kaydedildi.")
+
+    return {
+        "train_losses": train_losses,
+        "val_losses": val_losses,
+        "best_val_loss": best_val_loss,
+        "best_model_path": best_model_path,
+    }
+
+
+if __name__ == "__main__":
+    train_model()
