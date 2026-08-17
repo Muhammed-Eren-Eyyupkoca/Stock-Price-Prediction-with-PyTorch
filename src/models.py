@@ -1,4 +1,4 @@
-"""LSTM & GRU sequence models for next-day Close price prediction."""
+"""LSTM & GRU sequence models for next-day return (pct_change of Close) prediction."""
 
 import torch
 from torch import nn
@@ -14,7 +14,7 @@ class LSTMModel(nn.Module):
             input_size: Number of features per time step.
             hidden_size: Number of units in each LSTM layer.
             num_layers: Number of stacked LSTM layers.
-            output_size: Size of the final prediction (1 for next-day Close).
+            output_size: Size of the final prediction (1 for next-day return).
         """
         super().__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
@@ -42,7 +42,7 @@ class GRUModel(nn.Module):
             input_size: Number of features per time step.
             hidden_size: Number of units in each GRU layer.
             num_layers: Number of stacked GRU layers.
-            output_size: Size of the final prediction (1 for next-day Close).
+            output_size: Size of the final prediction (1 for next-day return).
         """
         super().__init__()
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)

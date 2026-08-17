@@ -1,8 +1,15 @@
 """Build the processed feature set for one stock symbol from data/raw/<symbol>.csv,
-split it chronologically into train/val/test (no shuffling), fit a MinMaxScaler on
+split it chronologically into train/val/test (no shuffling), fit a StandardScaler on
 the train split only, and save the three scaled splits under data/processed/. The
 fitted scaler is also saved (data/processed/scaler.pkl) so predictions can later
-be inverse-transformed back to real price units (see scripts/evaluate.py).
+be inverse-transformed back to real units (see scripts/evaluate.py).
+
+The prediction target is "Return", the day-over-day pct_change() of Close, rather
+than the raw Close price. Raw price levels drift outside the range a scaler was
+fit on (a rallying stock's test-period prices can end up far above anything seen
+in train), which made a price-target model's predictions collapse toward a flat
+line on the test set. Returns stay in a narrow, roughly stationary range across
+train/val/test, so the model doesn't have to extrapolate.
 
 Usage:
     python scripts/preprocess.py
@@ -16,7 +23,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
 try:
     import pandas_ta as ta
@@ -30,7 +37,7 @@ PROCESSED_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processe
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Kronolojik train/val/test bölme ve MinMax ölçekleme uygular."
+        description="Kronolojik train/val/test bölme ve StandardScaler ile ölçekleme uygular."
     )
     parser.add_argument(
         "--symbol", default="THYAO.IS", help="data/raw/ altındaki hisse sembolü (varsayılan: THYAO.IS)"
@@ -52,6 +59,14 @@ def load_and_clean(symbol: str) -> pd.DataFrame:
     df = pd.read_csv(raw_path, index_col="Date", parse_dates=True)
     df = df.ffill().dropna()
     return df
+
+
+def add_return_target(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds "Return", the day-over-day pct_change() of Close, as the prediction
+    target column. Drops the first row (pct_change() has no prior day there)."""
+    df = df.copy()
+    df["Return"] = df["Close"].pct_change()
+    return df.dropna(subset=["Return"])
 
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -106,8 +121,10 @@ def chronological_split(
 
 def scale_splits(
     train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, MinMaxScaler]:
-    scaler = MinMaxScaler()
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, StandardScaler]:
+    """Fits a StandardScaler on `train_df` only, then transforms all three splits
+    with it (val/test never influence the fit — no lookahead into the scaler)."""
+    scaler = StandardScaler()
     scaler.fit(train_df)
 
     train_scaled = pd.DataFrame(
@@ -138,6 +155,7 @@ def preprocess_symbol(symbol: str, train_frac: float = 0.70, val_frac: float = 0
         FileNotFoundError: If data/raw/<symbol>.csv does not exist.
     """
     df = load_and_clean(symbol)
+    df = add_return_target(df)
     df = add_technical_indicators(df)
     train_df, val_df, test_df = chronological_split(df, train_frac, val_frac)
     train_scaled, val_scaled, test_scaled, scaler = scale_splits(train_df, val_df, test_df)

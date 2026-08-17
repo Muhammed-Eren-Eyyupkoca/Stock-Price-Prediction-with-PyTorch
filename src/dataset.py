@@ -12,14 +12,15 @@ class StockDataset(Dataset):
     """Windowed dataset over a scaled feature table (e.g. data/processed/train.csv).
 
     Sample i is (X, y) where X is the `lookback` days ending at day i (all feature
-    columns) and y is the Close price on the following day.
+    columns) and y is the target column's value on the following day (by default
+    "Return", the day-over-day pct_change() of Close — see scripts/preprocess.py).
     """
 
     def __init__(
         self,
         data: Union[np.ndarray, pd.DataFrame],
         lookback: int,
-        close_col: Union[str, int] = "Close",
+        target_col: Union[str, int] = "Return",
     ) -> None:
         """Builds the windowed feature/target tensors from a scaled feature table.
 
@@ -27,26 +28,26 @@ class StockDataset(Dataset):
             data: Scaled feature table, either a DataFrame (columns are feature
                 names) or a numpy array (columns are feature positions).
             lookback: Number of preceding days used as the input window for each sample.
-            close_col: Close-price column name (DataFrame) or column index (numpy
-                array) used as the prediction target.
+            target_col: Prediction-target column name (DataFrame) or column index
+                (numpy array).
 
         Raises:
             ValueError: If lookback < 1, or data has too few rows for that lookback.
-            TypeError: If a numpy array is passed with a string close_col.
+            TypeError: If a numpy array is passed with a string target_col.
         """
         if lookback < 1:
             raise ValueError("lookback en az 1 olmalı")
 
         if isinstance(data, pd.DataFrame):
-            close_idx = data.columns.get_loc(close_col) if isinstance(close_col, str) else close_col
+            target_idx = data.columns.get_loc(target_col) if isinstance(target_col, str) else target_col
             values = data.to_numpy(dtype=np.float32)
         else:
-            if isinstance(close_col, str):
+            if isinstance(target_col, str):
                 raise TypeError(
-                    "numpy array girişinde close_col bir sütun adı değil, tam sayı indeks olmalı"
+                    "numpy array girişinde target_col bir sütun adı değil, tam sayı indeks olmalı"
                 )
             values = np.asarray(data, dtype=np.float32)
-            close_idx = close_col
+            target_idx = target_col
 
         if len(values) <= lookback:
             raise ValueError(
@@ -55,7 +56,7 @@ class StockDataset(Dataset):
             )
 
         self.lookback = lookback
-        self.close_idx = close_idx
+        self.target_idx = target_idx
         self.features = torch.from_numpy(values)
 
     def __len__(self) -> int:
@@ -71,8 +72,8 @@ class StockDataset(Dataset):
         Returns:
             A tuple (X, y): X has shape (lookback, n_features) and holds the
             `lookback` days ending at `idx`; y has shape (1,) and holds the
-            Close price on the following day.
+            target column's value on the following day.
         """
         x = self.features[idx : idx + self.lookback]
-        y = self.features[idx + self.lookback, self.close_idx].unsqueeze(0)
+        y = self.features[idx + self.lookback, self.target_idx].unsqueeze(0)
         return x, y
